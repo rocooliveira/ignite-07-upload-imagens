@@ -1,6 +1,7 @@
 import { Button, Box } from '@chakra-ui/react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useInfiniteQuery } from 'react-query';
+import {  useInView } from 'react-intersection-observer';
 
 import { Header } from '../components/Header';
 import { CardList } from '../components/CardList';
@@ -22,6 +23,8 @@ interface GetImagesResponseProps{
 }
 export default function Home(): JSX.Element {
 
+  const { ref, inView } = useInView();
+
   async function fetchImages({pageParam = null}):Promise<GetImagesResponseProps>{
     const { data } = await api('/api/images', {
       params: {
@@ -42,6 +45,12 @@ export default function Home(): JSX.Element {
       getNextPageParam: lastPage => lastPage?.after || null
   });
 
+  useEffect( () => {
+    if(inView){
+      fetchNextPage();
+    }
+  }, [inView]);
+
   const formattedData = useMemo(() => {
     const formatted = data?.pages.flatMap(item => {
       return item.data.flat();
@@ -53,7 +62,6 @@ export default function Home(): JSX.Element {
     return <Loading/>
   }
 
-  // TODO RENDER ERROR SCREEN
   if( !isLoading && isError ){
     return <Error/>
   }
@@ -66,6 +74,7 @@ export default function Home(): JSX.Element {
         <CardList cards={formattedData} />
         { hasNextPage && (
           <Button
+            ref={ref}
             onClick={ () => fetchNextPage() }
             disabled={isFetchingNextPage}
             mt={6}
